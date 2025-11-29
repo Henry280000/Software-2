@@ -21,13 +21,6 @@ docker exec backend_ecommerce python /app/scripts/sync_inventory.py
 | Cliente | test@test.com | Test123! |
 | Admin | admin@jerseys.com | Admin123! |
 
-## Documentación
-
-- **[GUIA_USO.md](GUIA_USO.md)** - Guía completa de uso del sistema
-- **[REFACTORIZACION.md](REFACTORIZACION.md)** - Cambios técnicos realizados
-- **[README_COMPLETO.md](README_COMPLETO.md)** - Documentación técnica detallada
-- **[README_ORIGINAL.md](README_ORIGINAL.md)** - README del proyecto original
-
 ## Arquitectura
 
 ```
