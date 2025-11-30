@@ -1,15 +1,7 @@
--- ============================================
--- SCRIPT DE INICIALIZACIÓN DE BASE DE DATOS MySQL
--- Sistema de Comercio Electrónico - Jerseys
--- ============================================
-
 -- Crear la base de datos si no existe
 CREATE DATABASE IF NOT EXISTS ecommerce_db;
 USE ecommerce_db;
 
--- ============================================
--- TABLA: Usuarios
--- ============================================
 CREATE TABLE IF NOT EXISTS Usuarios (
     id_usuario INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
@@ -22,9 +14,6 @@ CREATE TABLE IF NOT EXISTS Usuarios (
     INDEX idx_rol (rol)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================
--- TABLA: Inventario (Stock de productos)
--- ============================================
 CREATE TABLE IF NOT EXISTS Inventario (
     id_inventario INT AUTO_INCREMENT PRIMARY KEY,
     sku VARCHAR(50) UNIQUE NOT NULL,
@@ -41,9 +30,6 @@ CREATE TABLE IF NOT EXISTS Inventario (
     INDEX idx_disponibilidad (cantidad_disponible)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================
--- TABLA: Pedidos (Órdenes de compra)
--- ============================================
 CREATE TABLE IF NOT EXISTS Pedidos (
     id_pedido INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT NOT NULL,
@@ -58,9 +44,6 @@ CREATE TABLE IF NOT EXISTS Pedidos (
     INDEX idx_estado (estado)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================
--- TABLA: DetallePedido (Items del pedido)
--- ============================================
 CREATE TABLE IF NOT EXISTS DetallePedido (
     id_detalle INT AUTO_INCREMENT PRIMARY KEY,
     id_pedido INT NOT NULL,
@@ -77,10 +60,6 @@ CREATE TABLE IF NOT EXISTS DetallePedido (
     INDEX idx_sku (sku)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================
--- STORED PROCEDURE: Crear Pedido con Transacción
--- Maneja atomicidad: todo se completa o nada
--- ============================================
 DELIMITER //
 
 CREATE PROCEDURE sp_crear_pedido(
@@ -183,9 +162,6 @@ END //
 
 DELIMITER ;
 
--- ============================================
--- STORED PROCEDURE: Actualizar Stock (solo ADMIN)
--- ============================================
 DELIMITER //
 
 CREATE PROCEDURE sp_actualizar_stock(
@@ -224,10 +200,6 @@ BEGIN
 END //
 
 DELIMITER ;
-
--- ============================================
--- DATOS DE PRUEBA
--- ============================================
 
 -- Insertar usuarios de prueba
 INSERT INTO Usuarios (nombre, email, password_hash, rol) VALUES
@@ -283,9 +255,6 @@ INSERT INTO Inventario (sku, producto_id, nombre_producto, talla, cantidad_dispo
 ('MIA-HOME-2024-L', 'jersey_mia_home_2024', 'Inter Miami Jersey Home 2024', 'L', 36, 84.99),
 ('MIA-HOME-2024-XL', 'jersey_mia_home_2024', 'Inter Miami Jersey Home 2024', 'XL', 33, 84.99);
 
--- ============================================
--- VERIFICACIÓN FINAL
--- ============================================
 SELECT 'Base de datos MySQL inicializada correctamente' AS status;
 SELECT COUNT(*) AS total_usuarios FROM Usuarios;
 SELECT COUNT(*) AS total_inventario FROM Inventario;

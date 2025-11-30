@@ -1,23 +1,10 @@
--- ============================================
--- SCRIPT DE ROLES Y PRIVILEGIOS
--- Sistema de Seguridad MySQL
--- ============================================
-
 USE ecommerce_db;
-
--- ============================================
--- CREAR ROLES
--- ============================================
 
 -- Rol para Administradores
 CREATE ROLE IF NOT EXISTS 'ADMIN';
 
 -- Rol para Clientes
 CREATE ROLE IF NOT EXISTS 'CLIENTE';
-
--- ============================================
--- ASIGNAR PRIVILEGIOS AL ROL ADMIN
--- ============================================
 
 -- Acceso completo a la tabla Inventario
 GRANT SELECT, INSERT, UPDATE, DELETE ON ecommerce_db.Inventario TO 'ADMIN';
@@ -30,10 +17,6 @@ GRANT SELECT, INSERT, UPDATE ON ecommerce_db.DetallePedido TO 'ADMIN';
 -- Permiso para ejecutar el stored procedure de actualización de stock
 GRANT EXECUTE ON PROCEDURE ecommerce_db.sp_actualizar_stock TO 'ADMIN';
 GRANT EXECUTE ON PROCEDURE ecommerce_db.sp_crear_pedido TO 'ADMIN';
-
--- ============================================
--- ASIGNAR PRIVILEGIOS AL ROL CLIENTE
--- ============================================
 
 -- Solo lectura en Inventario (ver productos disponibles)
 GRANT SELECT ON ecommerce_db.Inventario TO 'CLIENTE';
@@ -48,10 +31,6 @@ GRANT SELECT, INSERT ON ecommerce_db.DetallePedido TO 'CLIENTE';
 -- Permiso para ejecutar solo el stored procedure de crear pedido
 GRANT EXECUTE ON PROCEDURE ecommerce_db.sp_crear_pedido TO 'CLIENTE';
 
--- ============================================
--- CREAR USUARIOS Y ASIGNAR ROLES
--- ============================================
-
 -- Usuario Admin (para la aplicación)
 CREATE USER IF NOT EXISTS 'admin_user'@'%' IDENTIFIED BY 'admin_secure_pass_2024';
 GRANT 'ADMIN' TO 'admin_user'@'%';
@@ -65,10 +44,6 @@ SET DEFAULT ROLE 'CLIENTE' TO 'cliente_user'@'%';
 -- Aplicar cambios
 FLUSH PRIVILEGES;
 
--- ============================================
--- VERIFICACIÓN DE ROLES Y PRIVILEGIOS
--- ============================================
-
 -- Mostrar roles creados
 SELECT 'Roles creados correctamente' AS status;
 SHOW GRANTS FOR 'ADMIN';
@@ -76,11 +51,3 @@ SHOW GRANTS FOR 'CLIENTE';
 
 -- Mostrar usuarios y sus roles
 SELECT 'Usuarios creados correctamente' AS status;
-
-SELECT '=====================================' AS divider;
-SELECT 'Privilegios del rol ADMIN:' AS info;
-SHOW GRANTS FOR 'ADMIN';
-
-SELECT '=====================================' AS divider;
-SELECT 'Privilegios del rol CLIENTE:' AS info;
-SHOW GRANTS FOR 'CLIENTE';
