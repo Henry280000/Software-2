@@ -69,8 +69,7 @@ sleep 30
 ```
 ordinario/
 ├── backend/
-│   ├── app_new.py              # Aplicación principal (SE USA)
-│   ├── app_old.py              # Archivo antiguo (NO SE USA)
+│   ├── app_new.py              # Aplicación principal (SE USA)         
 │   ├── templates/              # Templates Jinja2 (11 archivos)
 │   ├── static/
 │   │   ├── css/
