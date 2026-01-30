@@ -1,33 +1,54 @@
 #!/usr/bin/env python3
 """
-Script para sincronizar inventario de MongoDB a MySQL
-Carga los productos de MongoDB y crea registros de inventario en MySQL
+Script POO para sincronizar inventario de MongoDB a MySQL
+Implementa clase InventorySynchronizer para gestión de sincronización
 """
 
 import sys
 import os
+from typing import Dict, List, Tuple
+from dataclasses import dataclass
+
 sys.path.append('/app')
 
 from db_mysql import MySQLConnection
 from db_mongodb import MongoDBConnection
 
-def sync_inventory():
-    """Sincroniza inventario de MongoDB a MySQL"""
+
+@dataclass
+class InventoryItem:
+    """Representa un item de inventario"""
+    sku: str
+    producto_id: str
+    nombre_producto: str
+    talla: str
+    stock: int
+    precio: float
+
+
+class InventorySynchronizer:
+    """
+    Clase que gestiona la sincronización de inventario entre MongoDB y MySQL
+    Implementa validaciones y manejo de errores robusto
+    """
     
-    mysql = MySQLConnection()
-    mongo = MongoDBConnection()
+    def __init__(self):
+        """Inicializa las conexiones a bases de datos (Singleton)"""
+        self.mysql = MySQLConnection()
+        self.mongo = MongoDBConnection()
+        self.items_procesados = 0
+        self.items_actualizados = 0
+        self.items_agregados = 0
+        self.errores = []
     
-    print("=" * 60)
-    print("SINCRONIZACIÓN DE INVENTARIO: MongoDB -> MySQL")
-    print("=" * 60)
-    
-    try:
-        # Obtener todos los jerseys de MongoDB
-        jerseys = list(mongo.db.jerseys.find())
-        print(f"\n✓ Encontrados {len(jerseys)} productos en MongoDB")
+    def _get_inventory_mapping(self) -> Dict[str, List[Tuple[str, str, int]]]:
+        """
+        Retorna el mapeo de productos a items de inventario
         
-        # Mapeo de productos MongoDB a inventario MySQL
-        inventory_mapping = {
+        Returns:
+            Diccionario con producto_id como key y lista de (sku, talla, stock)
+        """
+        return {
             'jersey_rm_home_2024': [
                 ('RM-HOME-2024-S', 'S', 50),
                 ('RM-HOME-2024-M', 'M', 75),
@@ -65,79 +86,135 @@ def sync_inventory():
                 ('BAY-HOME-2024-XL', 'XL', 52)
             ]
         }
-        
-        connection = mysql.get_connection()
-        cursor = connection.cursor(dictionary=True)
-        
-        # Limpiar inventario existente (opcional)
-        print("\n⚠ Limpiando inventario existente...")
+    
+    def _limpiar_inventario_existente(self, cursor):
+        """Limpia el inventario existente antes de sincronizar"""
+        print("\nLimpiando inventario existente...")
         cursor.execute("DELETE FROM Inventario WHERE id_inventario > 10")
-        connection.commit()
+    
+    def _crear_inventory_item(self, jersey: dict, sku: str, talla: str, stock: int) -> InventoryItem:
+        """Crea un objeto InventoryItem desde datos de jersey"""
+        return InventoryItem(
+            sku=sku,
+            producto_id=jersey['_id'],
+            nombre_producto=jersey['nombre'],
+            talla=talla,
+            stock=stock,
+            precio=float(jersey['precio_base'])
+        )
+    
+    def _item_existe(self, cursor, sku: str) -> bool:
+        """Verifica si un item ya existe en la base de datos"""
+        cursor.execute("SELECT id_inventario FROM Inventario WHERE sku = %s", (sku,))
+        return cursor.fetchone() is not None
+    
+    def _actualizar_item(self, cursor, item: InventoryItem) -> bool:
+        """Actualiza un item existente en el inventario"""
+        try:
+            cursor.execute("""
+                UPDATE Inventario 
+                SET cantidad_disponible = %s, precio_unitario = %s
+                WHERE sku = %s
+            """, (item.stock, item.precio, item.sku))
+            print(f"  Actualizado: {item.sku} ({item.talla}) - Stock: {item.stock}")
+            self.items_actualizados += 1
+            return True
+        except Exception as e:
+            self.errores.append(f"Error actualizando {item.sku}: {e}")
+            return False
+    
+    def _insertar_item(self, cursor, item: InventoryItem) -> bool:
+        """Inserta un nuevo item en el inventario"""
+        try:
+            cursor.execute("""
+                INSERT INTO Inventario 
+                (sku, producto_id, nombre_producto, talla, cantidad_disponible, precio_unitario)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (item.sku, item.producto_id, item.nombre_producto, 
+                  item.talla, item.stock, item.precio))
+            print(f"  Agregado: {item.sku} ({item.talla}) - Stock: {item.stock}")
+            self.items_agregados += 1
+            return True
+        except Exception as e:
+            self.errores.append(f"Error insertando {item.sku}: {e}")
+            return False
+    
+    def sincronizar(self) -> bool:
+        """
+        Ejecuta la sincronización completa del inventario
         
-        items_added = 0
-        
-        # Insertar inventario para cada jersey
-        for jersey in jerseys:
-            product_id = jersey['_id']
-            product_name = jersey['nombre']
-            precio = float(jersey['precio_base'])
-            
-            if product_id in inventory_mapping:
-                print(f"\n→ Procesando: {product_name}")
-                
-                for sku, talla, stock in inventory_mapping[product_id]:
-                    try:
-                        # Verificar si ya existe
-                        cursor.execute("SELECT id_inventario FROM Inventario WHERE sku = %s", (sku,))
-                        existing = cursor.fetchone()
-                        
-                        if existing:
-                            # Actualizar stock existente
-                            cursor.execute("""
-                                UPDATE Inventario 
-                                SET cantidad_disponible = %s, precio_unitario = %s
-                                WHERE sku = %s
-                            """, (stock, precio, sku))
-                            print(f"  ✓ Actualizado: {sku} ({talla}) - Stock: {stock}")
-                        else:
-                            # Insertar nuevo
-                            cursor.execute("""
-                                INSERT INTO Inventario 
-                                (sku, producto_id, nombre_producto, talla, cantidad_disponible, precio_unitario)
-                                VALUES (%s, %s, %s, %s, %s, %s)
-                            """, (sku, product_id, product_name, talla, stock, precio))
-                            print(f"  ✓ Agregado: {sku} ({talla}) - Stock: {stock}")
-                        
-                        items_added += 1
-                        
-                    except Exception as e:
-                        print(f"  ✗ Error con {sku}: {e}")
-                        connection.rollback()
-                        continue
-                
-                connection.commit()
-        
-        # Mostrar resumen
-        cursor.execute("SELECT COUNT(*) as total FROM Inventario")
-        total = cursor.fetchone()['total']
-        
-        print("\n" + "=" * 60)
-        print(f"✓ SINCRONIZACIÓN COMPLETADA")
-        print(f"  Items procesados: {items_added}")
-        print(f"  Total en inventario: {total}")
+        Returns:
+            True si la sincronización fue exitosa, False en caso contrario
+        """
+        print("=" * 60)
+        print("SINCRONIZACIÓN DE INVENTARIO: MongoDB -> MySQL")
         print("=" * 60)
         
-        cursor.close()
-        connection.close()
+        try:
+            jerseys = list(self.mongo.db.jerseys.find())
+            print(f"\nEncontrados {len(jerseys)} productos en MongoDB")
+            
+            inventory_mapping = self._get_inventory_mapping()
+            
+            connection = self.mysql.get_connection()
+            cursor = connection.cursor(dictionary=True)
+            
+            self._limpiar_inventario_existente(cursor)
+            connection.commit()
+            
+            for jersey in jerseys:
+                product_id = jersey['_id']
+                product_name = jersey['nombre']
+                
+                if product_id in inventory_mapping:
+                    print(f"\nProcesando: {product_name}")
+                    
+                    for sku, talla, stock in inventory_mapping[product_id]:
+                        item = self._crear_inventory_item(jersey, sku, talla, stock)
+                        
+                        if self._item_existe(cursor, sku):
+                            self._actualizar_item(cursor, item)
+                        else:
+                            self._insertar_item(cursor, item)
+                        
+                        self.items_procesados += 1
+                    
+                    connection.commit()
+            
+            cursor.execute("SELECT COUNT(*) as total FROM Inventario")
+            total = cursor.fetchone()['total']
+            
+            self._imprimir_resumen(total)
+            
+            cursor.close()
+            connection.close()
+            
+            return len(self.errores) == 0
+            
+        except Exception as e:
+            print(f"\nError en sincronización: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def _imprimir_resumen(self, total_inventario: int):
+        """Imprime el resumen de la sincronización"""
+        print("\n" + "=" * 60)
+        print("SINCRONIZACIÓN COMPLETADA")
+        print(f"  Items procesados: {self.items_procesados}")
+        print(f"  Items agregados: {self.items_agregados}")
+        print(f"  Items actualizados: {self.items_actualizados}")
+        print(f"  Total en inventario: {total_inventario}")
         
-        return True
+        if self.errores:
+            print(f"  Errores encontrados: {len(self.errores)}")
+            for error in self.errores:
+                print(f"    - {error}")
         
-    except Exception as e:
-        print(f"\n✗ Error en sincronización: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+        print("=" * 60)
+
 
 if __name__ == "__main__":
-    success = sync_inventory()
+    synchronizer = InventorySynchronizer()
+    success = synchronizer.sincronizar()
     sys.exit(0 if success else 1)

@@ -1,16 +1,39 @@
 """
-Módulo de conexión a MySQL
+Módulo de conexión a MySQL con patrón Singleton
 """
 
 import mysql.connector
 from mysql.connector import pooling
 import os
+from threading import Lock
+
 
 class MySQLConnection:
+    """
+    Clase Singleton para manejar conexiones a MySQL
+    Garantiza una única instancia de conexión en toda la aplicación
+    """
+    
+    _instance = None
+    _lock = Lock()
+    
+    def __new__(cls):
+        """Implementación del patrón Singleton con thread-safety"""
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(MySQLConnection, cls).__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
+    
     def __init__(self):
-        """Inicializar pool de conexiones a MySQL"""
+        """Inicializar pool de conexiones a MySQL (solo una vez)"""
+        if self._initialized:
+            return
+        
         self.pool = None
         self.connect()
+        self._initialized = True
     
     def connect(self):
         """Crear pool de conexiones"""

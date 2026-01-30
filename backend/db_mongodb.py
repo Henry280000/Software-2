@@ -1,17 +1,40 @@
 """
-Módulo de conexión a MongoDB
+Módulo de conexión a MongoDB con patrón Singleton
 """
 
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 import os
+from threading import Lock
+
 
 class MongoDBConnection:
+    """
+    Clase Singleton para manejar conexiones a MongoDB
+    Garantiza una única instancia de conexión en toda la aplicación
+    """
+    
+    _instance = None
+    _lock = Lock()
+    
+    def __new__(cls):
+        """Implementación del patrón Singleton con thread-safety"""
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(MongoDBConnection, cls).__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
+    
     def __init__(self):
-        """Inicializar conexión a MongoDB"""
+        """Inicializar conexión a MongoDB (solo una vez)"""
+        if self._initialized:
+            return
+        
         self.client = None
         self.db = None
         self.connect()
+        self._initialized = True
     
     def connect(self):
         """Establecer conexión con MongoDB"""
