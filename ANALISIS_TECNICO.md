@@ -4,7 +4,7 @@
 
 ### Información del Proyecto
 - **Nombre del Proyecto:** Sistema E-Commerce de Jerseys Deportivos
-- **Repositorio Git:** [https://github.com/Henry280000/Ordinario_Data_Bases](https://github.com/Henry280000/Software-2.git)
+- **Repositorio Git:** (https://github.com/Henry280000/Software-2.git)
 - **Rama Principal:** main
 - **Lenguaje de Programación:** Python 3.x (Orientado a Objetos)
 - **Framework Web:** Flask
